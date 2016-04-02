@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="siberian-plugin-offlinemode"
+        version="1.0.0">
+
+    <name>OfflineMode</name>
+    <description>Download page content for offline browsing.</description>
+    <license>Siberian CMS</license>
+    <keywords>cordova,offline content</keywords>
+
+    <js-module src="www/OfflineMode.js" name="OfflineMode">
+        <clobbers target="window.OfflineMode" />
+    </js-module>
+
+    <!-- android -->
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="OfflineMode" >
+                <param name="android-package" value="com.appsmobilecompany.base.OfflineMode"/>
+            </feature>
+        </config-file>
+
+        <source-file src="src/android/OfflineMode.java" target-dir="src/com/appsmobilecompany/base" />
+    </platform>
+
+     <!-- ios -->
+     <platform name="ios">
+         <config-file target="config.xml" parent="/*">
+             <feature name="OfflineMode">
+                 <param name="ios-package" value="CDVOfflineMode" />
+             </feature>
+         </config-file>
+
+         <header-file src="src/ios/CDVOfflineMode.h" />
+         <source-file src="src/ios/CDVOfflineMode.m" />
+     </platform>
+</plugin>
