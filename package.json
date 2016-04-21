@@ -1,0 +1,11 @@
+{
+  "name": "siberian-plugin-offlinemode",
+  "version": "1.0",
+  "description": "Offline mode",
+  "cordova": {
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  }
+}
