@@ -19,6 +19,7 @@
         <config-file target="res/xml/config.xml" parent="/*">
             <feature name="OfflineMode" >
                 <param name="android-package" value="com.appsmobilecompany.base.OfflineMode"/>
+                <param name="onload" value="true" />
             </feature>
         </config-file>
 
@@ -30,6 +31,7 @@
          <config-file target="config.xml" parent="/*">
              <feature name="OfflineMode">
                  <param name="ios-package" value="CDVOfflineMode" />
+                 <param name="onload" value="true" />
              </feature>
          </config-file>
 
