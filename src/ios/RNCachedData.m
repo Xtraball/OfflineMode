@@ -1,3 +1,5 @@
+#import "RNCachedData.h"
+
 @implementation RNCachedData
 @synthesize data = data_;
 @synthesize response = response_;

@@ -12,7 +12,7 @@ NSTimer *checkTimer;
 #pragma mark Singleton Methods
 
 + (id)sharedManager {
-    static MyManager *sharedMyManager = nil;
+    static SBOfflineModeManager *sharedMyManager = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         sharedMyManager = [[self alloc] init];
@@ -27,14 +27,14 @@ NSTimer *checkTimer;
         isOnline = YES;
         
         // Allocate a reachability object
-        TMReachability* reach = [Reachability reachabilityWithHostname:@"www.google.com"];
+        TMReachability* reach = [TMReachability reachabilityWithHostname:@"www.google.com"];
         
-        reach.reachableBlock = ^(Reachability*reach)
+        reach.reachableBlock = ^(TMReachability *reach)
         {
             [self checkConnection];
         };
         
-        reach.unreachableBlock = ^(Reachability*reach)
+        reach.unreachableBlock = ^(TMReachability *reach)
         {
             [self checkConnection];
         };
@@ -55,8 +55,6 @@ NSTimer *checkTimer;
     postNotifications = YES;
     [self postNotification];
 }
-
-@private
 
 - (void)setUnreachable {
     isAwareOfReachability = YES;
@@ -88,9 +86,10 @@ NSTimer *checkTimer;
             completionHandler:^(NSData *data,
                                 NSURLResponse *response,
                                 NSError *error) {
-                NSString *response = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-
-                if([response isEqualToString:@"ok"]) {
+                
+                NSString *resp = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                
+                if([resp isEqualToString:@"ok"]) {
                     [self setReachable];
                 } else {
                     [self setUnreachable];
@@ -109,11 +108,12 @@ NSTimer *checkTimer;
     
     checkTimer = [NSTimer
                   scheduledTimerWithTimeInterval:3
-                  repeats:NO
-                  block:^(NSTimer *timer) {
-                      [self checkConnection]
-                  }];
-    
+                  target:[NSBlockOperation blockOperationWithBlock:^{
+        [self checkConnection];
+    }]
+                  selector:@selector(main)
+                  userInfo:nil
+                  repeats:NO];
 }
 
 @end

@@ -25,8 +25,13 @@
 //  DEALINGS IN THE SOFTWARE.
 //
 
+#import "NSURLRequest+MutableCopyWorkaround.h"
+#import "RNCachedData.h"
+#import "RNCachingURLProtocol.h"
+#import "SBOfflineModeManager.h"
+
 #define WORKAROUND_MUTABLE_COPY_LEAK 1
-
+
 @implementation RNCachingURLProtocol
 
 @synthesize connection = connection_;
@@ -40,17 +45,10 @@
     BOOL isCheckingConnection = [url rangeOfString:@"check_connection.php" options:NSCaseInsensitiveSearch].location != NSNotFound;
     BOOL isChangingStatus = NO;
     
-    if([url rangeOfString:@"/app:setIsOnline" options:NSCaseInsensitiveSearch].location != NSNotFound) {
-        NSMutableArray *path = [[NSMutableArray alloc] initWithArray:[url componentsSeparatedByString: @":"]];
-        NSString *value = [path lastObject];
-        useCache = [value isEqualToString:@"0"];
-        isChangingStatus = YES;
-    }
-    
     // Handling special $cordovaOauth facebook callback.
     if ([url rangeOfString:@"http://localhost/callback"].location != NSNotFound &&
         [url rangeOfString:@"redirect_uri=http://localhost/callback"].location == NSNotFound) {
-        useCache = NO;
+        [SBOfflineModeManager sharedManager].isOnline = NO;
         return NO;
     }
     
@@ -86,7 +84,7 @@
     NSArray *cachedExtensions = [[NSArray alloc] initWithObjects:@"js", @"css", @"png", @"jpg", @"gif", nil];
     BOOL cacheIsForced = [cachedExtensions containsObject:[[[self request] URL] pathExtension]];
     
-    if (useCache || cacheIsForced) {
+    if ([SBOfflineModeManager sharedManager].useCache || cacheIsForced) {
         
         RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[self cachePathForRequest:[self request]]];
         
@@ -104,7 +102,7 @@
             }
             
             loadData = NO;
-        } else if(useCache) {
+        } else if([SBOfflineModeManager sharedManager].useCache) {
             [[self client] URLProtocol:self didFailWithError:[NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCannotConnectToHost userInfo:nil]];
             loadData = NO;
         }
@@ -174,8 +172,8 @@
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-    if(!useCache) {
-        useCache = YES;
+    if(![SBOfflineModeManager sharedManager].useCache) {
+        [SBOfflineModeManager sharedManager].useCache = YES;
         [self startLoading];
     }
     

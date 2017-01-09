@@ -1,6 +1,6 @@
 #import <Cordova/CDV.h>
 #import "CDVOfflineMode.h"
-#import "SBOfflineModeManager.h
+#import "SBOfflineModeManager.h"
 
 @implementation CDVOfflineMode
 
@@ -46,21 +46,19 @@ NSString *icb;
 }
 
 
-@private
-
 - (void)connectionStatusChanged:(NSNotification*)notification {
-    if(ecb) {
+    if(icb) {
         [self.commandDelegate
          evalJs:[NSString stringWithFormat:@"%@(%@)",
-                 gcb,
-                 getJson([NSDictionary
-                          dictionaryWithObjectsAndKeys:
-                            [SBOfflineModeManager sharedManager].isOnline,
-                            @"isOnline",
-                            [SBOfflineModeManager sharedManager].useCache,
-                            @"usingCache",
-                            nil
-                          ])
+                 icb,
+                 [self getJson:[NSDictionary
+                                dictionaryWithObjectsAndKeys:
+                                [NSNumber numberWithBool:[SBOfflineModeManager sharedManager].isOnline],
+                                @"isOnline",
+                                [SBOfflineModeManager sharedManager].useCache,
+                                @"usingCache",
+                                nil
+                                ]]
                  ]
          ];
     }

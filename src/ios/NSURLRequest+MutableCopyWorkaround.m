@@ -1,3 +1,5 @@
+#import "NSURLRequest+MutableCopyWorkaround.h"
+
 @implementation NSURLRequest(MutableCopyWorkaround)
 
 - (id) mutableCopyWorkaround {

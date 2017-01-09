@@ -73,7 +73,7 @@ static void TMReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkRea
 {
 #pragma unused (target)
     
-    TMReachability *reachability = ((__bridge Reachability*)info);
+    TMReachability *reachability = ((__bridge TMReachability*)info);
     
     // We probably don't need an autoreleasepool here, as GCD docs state each queue has its own autorelease pool,
     // but what the heck eh?

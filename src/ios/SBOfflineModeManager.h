@@ -1,8 +1,8 @@
 #import <Foundation/Foundation.h>
 
-const NSString *SBOfflineModeManagerConnectionStatusChanged = "SBOfflineModeManagerConnectionStatusChanged";
-
-@interface SBOfflineModeManager : NSObject {    
+NSString const *SBOfflineModeManagerConnectionStatusChanged = @"SBOfflineModeManagerConnectionStatusChanged";
+
+@interface SBOfflineModeManager : NSObject {
     BOOL useCache;
     BOOL isOnline;
     
@@ -10,10 +10,10 @@ const NSString *SBOfflineModeManagerConnectionStatusChanged = "SBOfflineModeMana
 }
 
 @property (nonatomic, retain) NSString *checkConnectionURL;
-@property (nonatomic, retain) BOOL *useCache;
-@property (nonatomic, retain) BOOL *isOnline;
+@property (nonatomic) BOOL useCache;
+@property (nonatomic) BOOL isOnline;
 
-+ (id)sharedManager;
-- (id)watchReachability;
++ (SBOfflineModeManager *)sharedManager;
+- (void)watchReachability;
 
 @end
