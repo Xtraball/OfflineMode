@@ -10,7 +10,7 @@ NSString *icb;
     [[SBOfflineModeManager sharedManager] watchReachability];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(connectionStatusChanged:)
-                                                 name: SBOfflineModeManagerConnectionStatusChanged
+                                                 name: @"SBOfflineModeManagerConnectionStatusChanged"
                                                object:nil];
 }
 
@@ -48,17 +48,18 @@ NSString *icb;
 
 - (void)connectionStatusChanged:(NSNotification*)notification {
     if(icb) {
+        NSDictionary *dico = [NSDictionary
+                              dictionaryWithObjectsAndKeys:
+                              [NSNumber numberWithBool:[SBOfflineModeManager sharedManager].isOnline],
+                              @"isOnline",
+                              [NSNumber numberWithBool:[SBOfflineModeManager sharedManager].useCache],
+                              @"usingCache",
+                              nil
+                              ];
         [self.commandDelegate
          evalJs:[NSString stringWithFormat:@"%@(%@)",
                  icb,
-                 [self getJson:[NSDictionary
-                                dictionaryWithObjectsAndKeys:
-                                [NSNumber numberWithBool:[SBOfflineModeManager sharedManager].isOnline],
-                                @"isOnline",
-                                [SBOfflineModeManager sharedManager].useCache,
-                                @"usingCache",
-                                nil
-                                ]]
+                 [self getJson:dico]
                  ]
          ];
     }

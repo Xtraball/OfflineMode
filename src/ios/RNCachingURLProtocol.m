@@ -75,14 +75,25 @@
 {
     // This stores in the Caches directory, which can be deleted when space is low, but we only use it for offline access
     NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject];
-    return [cachesPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%lx", (unsigned long) [[[aRequest URL] absoluteString] hash]]];
+    
+    // Here we remove the timestamp ?t=123456789 in request for caching. It's useful when dealing with dynamic css and such
+    NSString *url = [[aRequest URL] absoluteString];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\.css\\?t=[\\d]+$" options:NSRegularExpressionCaseInsensitive error:NULL];
+    NSString *modifiedUrl = [regex stringByReplacingMatchesInString:url options:0 range:NSMakeRange(0, [url length]) withTemplate:@".css"];
+    
+    if(![url isEqualToString:modifiedUrl]) {
+        NSLog(@"Storing URL %@ instead of %@", modifiedUrl, url);
+    }
+    
+    return [cachesPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%lx", (unsigned long) [modifiedUrl hash]]];
 }
 
 - (void)startLoading
 {
     BOOL loadData = YES;
     NSArray *cachedExtensions = [[NSArray alloc] initWithObjects:@"js", @"css", @"png", @"jpg", @"gif", nil];
-    BOOL cacheIsForced = [cachedExtensions containsObject:[[[self request] URL] pathExtension]];
+
+    BOOL cacheIsForced = [cachedExtensions containsObject:[[[self request] URL] pathExtension]] || [[[self request] valueForHTTPHeaderField:@"X-Offline-Mode-Cache-Request"] isEqualToString:@"true"];
     
     if ([SBOfflineModeManager sharedManager].useCache || cacheIsForced) {
         
@@ -117,7 +128,7 @@
 #endif
         
         // we need to mark this request with our header so we know not to handle it in +[NSURLProtocol canInitWithRequest:].
-        [connectionRequest setValue:@"" forHTTPHeaderField:RNCachingURLHeader];
+        [connectionRequest setValue:@"1" forHTTPHeaderField:RNCachingURLHeader];
         NSURLConnection *connection = [NSURLConnection connectionWithRequest:connectionRequest
                                                                     delegate:self];
         [self setConnection:connection];
@@ -127,6 +138,13 @@
 - (void)stopLoading
 {
     [[self connection] cancel];
+}
+
+- (NSHTTPURLResponse *) addCacheHeaderToResponse:(NSURLResponse *)response {
+    NSHTTPURLResponse *resp = (NSHTTPURLResponse *)response;
+    NSMutableDictionary *headers = [resp.allHeaderFields mutableCopy];
+    [headers setObject:@"true" forKey:@"X-From-Native-Cache"];
+    return [[NSHTTPURLResponse alloc] initWithURL:resp.URL statusCode:resp.statusCode HTTPVersion:@"HTTP/1.1" headerFields:headers];
 }
 
 // NSURLConnection delegates (generally we pass these on to our client)
@@ -149,10 +167,12 @@
         // The redirectable request will cause a new outside request from the NSURLProtocolClient, which
         // must not be marked with our header.
         [redirectableRequest setValue:nil forHTTPHeaderField:RNCachingURLHeader];
-        
         NSString *cachePath = [self cachePathForRequest:[self request]];
         RNCachedData *cache = [RNCachedData new];
-        [cache setResponse:response];
+        
+      
+        
+        [cache setResponse: [self addCacheHeaderToResponse:response]];
         [cache setData:[self data]];
         [cache setRedirectRequest:redirectableRequest];
         [NSKeyedArchiver archiveRootObject:cache toFile:cachePath];
@@ -173,7 +193,7 @@
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
     if(![SBOfflineModeManager sharedManager].useCache) {
-        [SBOfflineModeManager sharedManager].useCache = YES;
+        [[SBOfflineModeManager sharedManager] setUnreachable];
         [self startLoading];
     }
     
@@ -196,7 +216,7 @@
     // NSLog(@"Caching data 2");
     NSString *cachePath = [self cachePathForRequest:[self request]];
     RNCachedData *cache = [RNCachedData new];
-    [cache setResponse:[self response]];
+    [cache setResponse: [self addCacheHeaderToResponse:[self response]]];
     [cache setData:[self data]];
     [NSKeyedArchiver archiveRootObject:cache toFile:cachePath];
     

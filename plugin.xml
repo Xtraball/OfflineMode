@@ -37,5 +37,15 @@
 
          <header-file src="src/ios/CDVOfflineMode.h" />
          <source-file src="src/ios/CDVOfflineMode.m" />
+         <header-file src="src/ios/NSURLRequest+MutableCopyWorkaround.h" />
+         <source-file src="src/ios/NSURLRequest+MutableCopyWorkaround.m" />
+         <header-file src="src/ios/RNCachedData.h" />
+         <source-file src="src/ios/RNCachedData.m" />
+         <header-file src="src/ios/RNCachingURLProtocol.h" />
+         <source-file src="src/ios/RNCachingURLProtocol.m" />
+         <header-file src="src/ios/SBOfflineModeManager.h" />
+         <source-file src="src/ios/SBOfflineModeManager.m" />
+         <header-file src="src/ios/TMReachability.h" />
+         <source-file src="src/ios/TMReachability.m" />
      </platform>
 </plugin>
