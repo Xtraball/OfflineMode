@@ -44,14 +44,14 @@
     NSString *url = [NSString stringWithFormat:@"%@", [request URL]];
     BOOL isCheckingConnection = [url rangeOfString:@"check_connection.php" options:NSCaseInsensitiveSearch].location != NSNotFound;
     BOOL isChangingStatus = NO;
-    
+
     // Handling special $cordovaOauth facebook callback.
     if ([url rangeOfString:@"http://localhost/callback"].location != NSNotFound &&
         [url rangeOfString:@"redirect_uri=http://localhost/callback"].location == NSNotFound) {
         [SBOfflineModeManager sharedManager].isOnline = NO;
         return NO;
     }
-    
+
     // only handle http requests we haven't marked with our header.
     if (([[[request URL] scheme] isEqualToString:@"http"] ||
          [[[request URL] scheme] isEqualToString:@"https"]) &&
@@ -62,7 +62,7 @@
         ) {
         return YES;
     }
-    
+
     return NO;
 }
 
@@ -75,16 +75,16 @@
 {
     // This stores in the Caches directory, which can be deleted when space is low, but we only use it for offline access
     NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject];
-    
+
     // Here we remove the timestamp ?t=123456789 in request for caching. It's useful when dealing with dynamic css and such
     NSString *url = [[aRequest URL] absoluteString];
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\.css\\?t=[\\d]+$" options:NSRegularExpressionCaseInsensitive error:NULL];
     NSString *modifiedUrl = [regex stringByReplacingMatchesInString:url options:0 range:NSMakeRange(0, [url length]) withTemplate:@".css"];
-    
+
     if(![url isEqualToString:modifiedUrl]) {
         NSLog(@"Storing URL %@ instead of %@", modifiedUrl, url);
     }
-    
+
     return [cachesPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%lx", (unsigned long) [modifiedUrl hash]]];
 }
 
@@ -93,17 +93,17 @@
     BOOL loadData = YES;
     NSArray *cachedExtensions = [[NSArray alloc] initWithObjects:@"js", @"css", @"png", @"jpg", @"gif", nil];
 
-    BOOL cacheIsForced = [cachedExtensions containsObject:[[[self request] URL] pathExtension]] || [[[self request] valueForHTTPHeaderField:@"X-Offline-Mode-Cache-Request"] isEqualToString:@"true"];
-    
-    if ([SBOfflineModeManager sharedManager].useCache || cacheIsForced) {
-        
+    BOOL cache = [cachedExtensions containsObject:[[[self request] URL] pathExtension]];
+
+    if (cache) {
+
         RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[self cachePathForRequest:[self request]]];
-        
-        if (cache) {
+
+        if (![SBOfflineModeManager sharedManager].isOnline && cache) {
             NSData *data = [cache data];
             NSURLResponse *response = [cache response];
             NSURLRequest *redirectRequest = [cache redirectRequest];
-            
+
             if (redirectRequest) {
                 [[self client] URLProtocol:self wasRedirectedToRequest:redirectRequest redirectResponse:response];
             } else {
@@ -111,14 +111,14 @@
                 [[self client] URLProtocol:self didLoadData:data];
                 [[self client] URLProtocolDidFinishLoading:self];
             }
-            
+
             loadData = NO;
-        } else if([SBOfflineModeManager sharedManager].useCache) {
+        } else if(![SBOfflineModeManager sharedManager].isOnline) {
             [[self client] URLProtocol:self didFailWithError:[NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCannotConnectToHost userInfo:nil]];
             loadData = NO;
         }
     }
-    
+
     if(loadData) {
         NSMutableURLRequest *connectionRequest =
 #if WORKAROUND_MUTABLE_COPY_LEAK
@@ -126,7 +126,7 @@
 #else
         [[self request] mutableCopy];
 #endif
-        
+
         // we need to mark this request with our header so we know not to handle it in +[NSURLProtocol canInitWithRequest:].
         [connectionRequest setValue:@"1" forHTTPHeaderField:RNCachingURLHeader];
         NSURLConnection *connection = [NSURLConnection connectionWithRequest:connectionRequest
@@ -169,15 +169,15 @@
         [redirectableRequest setValue:nil forHTTPHeaderField:RNCachingURLHeader];
         NSString *cachePath = [self cachePathForRequest:[self request]];
         RNCachedData *cache = [RNCachedData new];
-        
-      
-        
+
+
+
         [cache setResponse: [self addCacheHeaderToResponse:response]];
         [cache setData:[self data]];
         [cache setRedirectRequest:redirectableRequest];
         [NSKeyedArchiver archiveRootObject:cache toFile:cachePath];
         [[self client] URLProtocol:self wasRedirectedToRequest:redirectableRequest redirectResponse:response];
-        
+
         return redirectableRequest;
     } else {
         return request;
@@ -192,11 +192,11 @@
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-    if(![SBOfflineModeManager sharedManager].useCache) {
+    if([SBOfflineModeManager sharedManager].isOnline) {
         [[SBOfflineModeManager sharedManager] setUnreachable];
         [self startLoading];
     }
-    
+
     [[self client] URLProtocol:self didFailWithError:error];
     [self setConnection:nil];
     [self setData:nil];
@@ -212,14 +212,14 @@
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
     [[self client] URLProtocolDidFinishLoading:self];
-    
+
     // NSLog(@"Caching data 2");
     NSString *cachePath = [self cachePathForRequest:[self request]];
     RNCachedData *cache = [RNCachedData new];
     [cache setResponse: [self addCacheHeaderToResponse:[self response]]];
     [cache setData:[self data]];
     [NSKeyedArchiver archiveRootObject:cache toFile:cachePath];
-    
+
     [self setConnection:nil];
     [self setData:nil];
     [self setResponse:nil];

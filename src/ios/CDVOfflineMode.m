@@ -17,30 +17,16 @@ NSString *icb;
 
 - (void)setInternalCallback:(CDVInvokedUrlCommand*)command
 {
-    icb = [command.arguments objectAtIndex:0];
-    
-    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-}
-
-- (void)useCache:(CDVInvokedUrlCommand*)command
-{
-    BOOL useCache = [[command.arguments objectAtIndex:0] isEqualToString:@"true"];
-    NSLog(@"[ios] use cache: %i", useCache);
-    
-    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    
-    [SBOfflineModeManager sharedManager].useCache = YES;
-    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+    icb = command.callbackId;
 }
 
 - (void)setCheckConnectionURL:(CDVInvokedUrlCommand*)command
 {
     NSString *url = [command.arguments objectAtIndex:0];
     NSLog(@"[ios] use URL: %@", url);
-    
+
     [SBOfflineModeManager sharedManager].checkConnectionURL = url;
-    
+
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
 }
@@ -48,36 +34,18 @@ NSString *icb;
 
 - (void)connectionStatusChanged:(NSNotification*)notification {
     if(icb) {
-        NSDictionary *dico = [NSDictionary
+       NSDictionary *dico = [NSDictionary
                               dictionaryWithObjectsAndKeys:
                               [NSNumber numberWithBool:[SBOfflineModeManager sharedManager].isOnline],
                               @"isOnline",
-                              [NSNumber numberWithBool:[SBOfflineModeManager sharedManager].useCache],
-                              @"usingCache",
                               nil
                               ];
-        [self.commandDelegate
-         evalJs:[NSString stringWithFormat:@"%@(%@)",
-                 icb,
-                 [self getJson:dico]
-                 ]
-         ];
+
+        CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                                                messageAsDictionary:dico];
+        [result setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:result callbackId:icb];
     }
 }
-
-
-- (NSString *)getJson:(NSDictionary *)data {
-    NSError *error;
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:data
-                                                       options:(NSJSONWritingOptions)NSJSONWritingPrettyPrinted
-                                                         error:&error];
-    if (!jsonData) {
-        NSLog(@"getJson error: %@", error.localizedDescription);
-        return @"{}";
-    } else {
-        return [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-    }
-}
-
 
 @end

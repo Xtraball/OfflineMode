@@ -1,20 +1,18 @@
-                                #import <Foundation/Foundation.h>
+#import <Foundation/Foundation.h>
 
 @interface SBOfflineModeManager : NSObject {
-                                            BOOL useCache;
-                                            BOOL isOnline;
-                                            
-                                            NSString *checkConnectionURL;
-                                    }
+    BOOL isOnline;
 
-                                @property (nonatomic, retain) NSString *checkConnectionURL;
-                                @property (nonatomic) BOOL useCache;
-                                @property (nonatomic) BOOL isOnline;
+    NSString *checkConnectionURL;
+}
 
-                                + (SBOfflineModeManager *)sharedManager;
-                                - (void)watchReachability;
-                                - (void)setUnreachable;
-                                - (void)setReachable;
+@property (nonatomic, retain) NSString *checkConnectionURL;
+@property (nonatomic) BOOL isOnline;
+
++ (SBOfflineModeManager *)sharedManager;
+- (void)watchReachability;
+- (void)setUnreachable;
+- (void)setReachable;
 
 
-                                @end
+@end

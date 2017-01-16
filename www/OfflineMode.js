@@ -21,11 +21,11 @@ var OfflineMode = function() {
     };
 
     exec(
-        function() { console.log("[offline-mode] Inserted general callback"); },
-        function() { console.log("[offline-mode] failed to insert general callback"); },
+        offline_mode[internalCallbackName],
+        function() { console.log("[offline-mode] error (should never be called)"); },
          "OfflineMode",
          "setInternalCallback",
-        ["OfflineMode."+internalCallbackName]
+         []
     );
 
     offline_mode.registerCallback = function(callback) {

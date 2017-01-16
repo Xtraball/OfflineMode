@@ -24,7 +24,7 @@ static NSString *const kRedirectRequestKey = @"redirectRequest";
         [self setResponse:[aDecoder decodeObjectForKey:kResponseKey]];
         [self setRedirectRequest:[aDecoder decodeObjectForKey:kRedirectRequestKey]];
     }
-    
+
     return self;
 }
 

@@ -4,7 +4,8 @@
 
 @interface CDVOfflineMode : CDVPlugin
 
-- (void)useCache:(CDVInvokedUrlCommand*)command;
 - (void)pluginInitialize;
+- (void)setInternalCallback:(CDVInvokedUrlCommand*)command;
+- (void)setCheckConnectionURL:(CDVInvokedUrlCommand*)command;
 
 @end
