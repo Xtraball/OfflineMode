@@ -45,6 +45,8 @@
          <source-file src="src/ios/RNCachingURLProtocol.m" />
          <header-file src="src/ios/SBOfflineModeManager.h" />
          <source-file src="src/ios/SBOfflineModeManager.m" />
+         <header-file src="src/ios/SBOfflineModeDownloader.h" />
+         <source-file src="src/ios/SBOfflineModeDownloader.m" />
          <header-file src="src/ios/TMReachability.h" />
          <source-file src="src/ios/TMReachability.m" />
      </platform>
