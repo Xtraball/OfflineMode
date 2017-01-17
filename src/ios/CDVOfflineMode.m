@@ -1,6 +1,7 @@
 #import <Cordova/CDV.h>
 #import "CDVOfflineMode.h"
 #import "SBOfflineModeManager.h"
+#import "SBOfflineModeDownloader.h"
 
 @implementation CDVOfflineMode
 
@@ -24,13 +25,27 @@ NSString *icb;
 {
     NSString *url = [command.arguments objectAtIndex:0];
     NSLog(@"[ios] use URL: %@", url);
-
+    
     [SBOfflineModeManager sharedManager].checkConnectionURL = url;
-
+    
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
 }
 
+- (void)cacheURL:(CDVInvokedUrlCommand*)command {
+    NSString *uri = [command.arguments objectAtIndex:0];
+    NSLog(@"[ios] cacheURL : %@", uri);
+    NSURL *url = [NSURL URLWithString:uri];
+    if(url) {
+        [[[SBOfflineModeDownloader alloc]
+         initWithCommandDelegate:self.commandDelegate
+         callback:command.callbackId
+         andURL:url] start];
+    } else {
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR]
+                                    callbackId:command.callbackId];
+    }
+}
 
 - (void)connectionStatusChanged:(NSNotification*)notification {
     if(icb) {

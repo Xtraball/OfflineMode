@@ -55,10 +55,10 @@ public class OfflineMode extends CordovaPlugin {
         checkConnection();
     }
 
-    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
         if (action.equals("setCheckConnectionUrl")) {
             if(Uri.parse(args.getString(0)) != null && args.getString(0).trim().startsWith("http")) {
-               checkConnectionUrl = args.getString(0);
+                checkConnectionUrl = args.getString(0);
                 callbackContext.success();
                 return true;
             }
@@ -66,6 +66,33 @@ public class OfflineMode extends CordovaPlugin {
 
         if (action.equals("setInternalCallback")) {
             icb = callbackContext;
+            return true;
+        }
+
+        if (action.equals("cacheURL")) {
+            final Uri uri = Uri.parse(args.getString(0));
+            if(uri != null && args.getString(0).trim().startsWith("http")) {
+                Runnable r = new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        try {
+                            CordovaResourceApi.OpenForReadResult result = handleOpenForRead(toPluginUri(uri));
+                            if(result.length > 0) {
+                                callbackContext.success();
+                                return;
+                            }
+                        } catch(IOException e) {
+                            Log.e("Error: ", e.getMessage());
+                        }
+                        callbackContext.error("error");
+                    }
+                };
+
+                Thread t = new Thread(r);
+                t.start();
+            }
             return true;
         }
 

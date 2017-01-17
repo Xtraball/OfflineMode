@@ -9,8 +9,8 @@ var OfflineMode = function() {
         exec(success_callback, error_callback, "OfflineMode", "setCheckConnectionURL", [checkConnectionURL]);
     };
 
-    offline_mode.useCache = function(is_online, success_callback, error_callback) {
-        exec(success_callback, error_callback, "OfflineMode", "useCache", [is_online]);
+    offline_mode.cacheURL = function(url, success_callback, error_callback) {
+        exec(success_callback, error_callback, "OfflineMode", "cacheURL", [url]);
     };
 
     var internalCallbackName = "__internal_callback_"+(+(new Date()));

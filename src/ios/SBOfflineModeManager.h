@@ -2,7 +2,7 @@
 
 @interface SBOfflineModeManager : NSObject {
     BOOL isOnline;
-
+    
     NSString *checkConnectionURL;
 }
 

@@ -24,22 +24,22 @@ NSTimer *checkTimer;
     if (self = [super init]) {
         checkConnectionURL = nil;
         isOnline = YES;
-
+        
         // Allocate a reachability object
         TMReachability* reach = [TMReachability reachabilityWithHostname:@"www.google.com"];
-
+        
         reach.reachableBlock = ^(TMReachability *reach)
         {
             [self checkConnection];
         };
-
+        
         reach.unreachableBlock = ^(TMReachability *reach)
         {
             [self checkConnection];
         };
-
+        
         [reach startNotifier];
-
+        
     }
     return self;
 }
@@ -58,14 +58,14 @@ NSTimer *checkTimer;
 - (void)setUnreachable {
     isAwareOfReachability = YES;
     isOnline = NO;
-
+    
     [self postNotification];
 }
 
 - (void)setReachable {
     isAwareOfReachability = YES;
     isOnline = YES;
-
+    
     [self postNotification];
 }
 
@@ -80,33 +80,33 @@ NSTimer *checkTimer;
 - (void)checkConnection {
     if(self.checkConnectionURL) {
         NSURL *URL = [NSURL URLWithString:self.checkConnectionURL];
-
+        
         if ([[UIApplication sharedApplication] canOpenURL:[URL absoluteURL]] ) {
             NSURLSession *session = [NSURLSession sharedSession];
             [[session dataTaskWithURL:URL
                     completionHandler:^(NSData *data,
                                         NSURLResponse *response,
                                         NSError *error) {
-
+                        
                         NSString *resp = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-
+                        
                         if([resp isEqualToString:@"1"]) {
                             [self setReachable];
                         } else {
                             [self setUnreachable];
                         }
-
+                        
                         [self startTimer];
                     }] resume];
             return;
         }
     }
-
+    
     [self startTimer]; // Reschedule check for later, we might get URL later
 }
 
 - (void)startTimer {
-
+    
     dispatch_async(dispatch_get_main_queue(), ^{
         if([checkTimer isKindOfClass: [NSTimer class]]) {
             [checkTimer invalidate];
