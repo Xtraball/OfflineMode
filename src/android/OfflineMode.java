@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -56,7 +57,7 @@ public class OfflineMode extends CordovaPlugin {
     }
 
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
-        if (action.equals("setCheckConnectionUrl")) {
+        if (action.equals("setCheckConnectionURL")) {
             if(Uri.parse(args.getString(0)) != null && args.getString(0).trim().startsWith("http")) {
                 checkConnectionUrl = args.getString(0);
                 callbackContext.success();
@@ -275,7 +276,7 @@ public class OfflineMode extends CordovaPlugin {
             public void run()
             {
                 HttpURLConnection connection = null;
-                if(checkConnectionUrl != null && checkConnectionUrl.trim() != "") {
+                if(checkConnectionUrl != null && !checkConnectionUrl.trim().equals("")) {
                     postNotifications = true;
 
                     try {
@@ -295,13 +296,16 @@ public class OfflineMode extends CordovaPlugin {
                                     result += line;
                             }
                             in.close();
-                            if (result.trim() == "1") {
+                            result = result.trim();
+                            if (result.equals("1")) {
                                 setReachable();
                             } else {
                                 setUnreachable();
                             }
                         }
 
+                    } catch(UnknownHostException e) {
+                        setUnreachable();
                     } catch (Exception e) {
                         Log.e("Error: ", e.getMessage());
                     } finally {
