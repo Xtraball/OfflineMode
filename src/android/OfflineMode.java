@@ -1,4 +1,4 @@
-package dev.siberiancms.www.test;
+package com.appsmobilecompany.base;
 
 import android.annotation.TargetApi;
 import android.net.Uri;
