@@ -1,4 +1,4 @@
-package com.appsmobilecompany.base;
+package dev.siberiancms.www.test;
 
 import android.annotation.TargetApi;
 import android.net.Uri;
@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -102,15 +103,21 @@ public class OfflineMode extends CordovaPlugin {
 
     @Override
     public Uri remapUri(Uri uri) {
-        if(uri.getScheme().startsWith("http")) {
-            String filename = uri.getLastPathSegment();
+        File cached = new File(this.cachePathForUri(uri));
+        File cachedMeta = new File(this.cachePathForUri(uri)+".meta");
+        if(cached.exists() || cachedMeta.exists()) {
+            return toPluginUri(uri);
+        } else {
+            if(uri.getScheme().startsWith("http")) {
+                String filename = uri.getLastPathSegment();
 
-            if(filename != null) {
-                int lastDot = filename.lastIndexOf(".");
-                if(lastDot > 0 && lastDot+1 < filename.length()) {
-                    String ext = filename.substring(lastDot+1);
-                    if(CACHED_EXTENSIONS.contains(ext)) {
-                        return toPluginUri(uri);
+                if(filename != null) {
+                    int lastDot = filename.lastIndexOf(".");
+                    if(lastDot > 0 && lastDot+1 < filename.length()) {
+                        String ext = filename.substring(lastDot+1);
+                        if(CACHED_EXTENSIONS.contains(ext)) {
+                            return toPluginUri(uri);
+                        }
                     }
                 }
             }
@@ -132,11 +139,22 @@ public class OfflineMode extends CordovaPlugin {
             connection.connect();
 
             long lengthOfFile = connection.getContentLength();
+            String contentTypeOfFile = connection.getContentType();
 
             if(connection.getResponseCode() >= 300 && connection.getResponseCode() <= 310) {
                 String newUrl = connection.getHeaderField("Location");
                 if(newUrl != url.toString()) {
-                    return this.handleOpenForRead(toPluginUri(Uri.parse(newUrl)));
+                    JSONObject meta = new JSONObject();
+                    meta.put("Location", newUrl);
+
+                    FileWriter file = new FileWriter(cachePath+".meta");
+                    file.write(meta.toString(4));
+                    file.flush();
+                    file.close();
+
+                    Uri newUri = Uri.parse(newUrl);
+
+                    return this.handleOpenForRead(toPluginUri(newUri));
                 }
             } else if (connection.getResponseCode() >= 200 && connection.getResponseCode() <= 400) {
                 // download the file
@@ -157,18 +175,18 @@ public class OfflineMode extends CordovaPlugin {
 
                 // closing streams
                 output.close();
-                input.reset();
 
                 JSONObject meta = new JSONObject();
-                meta.put("Content-Type", connection.getContentType());
-                meta.put("Content-Length", connection.getContentLength());
+                meta.put("Content-Type", contentTypeOfFile);
+                meta.put("Content-Length", lengthOfFile);
 
                 FileWriter file = new FileWriter(cachePath+".meta");
                 file.write(meta.toString(4));
                 file.flush();
                 file.close();
 
-                return new CordovaResourceApi.OpenForReadResult(orig, input, connection.getContentType(), lengthOfFile, null);
+                FileInputStream cached = new FileInputStream(new File(cachePath));
+                return new CordovaResourceApi.OpenForReadResult(orig, cached, contentTypeOfFile, lengthOfFile, null);
             }
 
         } catch (Exception e) {
@@ -176,12 +194,12 @@ public class OfflineMode extends CordovaPlugin {
         }
 
         File cached = new File(cachePath);
-        if(cached.exists()) {
-            InputStream stream = new FileInputStream(cached);
-            int contentLength = stream.available();
+        File meta_file = new File(cachePath+".meta");
+
+        if(cached.exists() || meta_file.exists()) {
+            int contentLength = 0;
             String contentType = "application/octet-stream";
 
-            File meta_file = new File(cachePath+".meta");
             if(meta_file.exists()) {
                 try {
                     InputStream meta = new FileInputStream(meta_file);
@@ -190,20 +208,36 @@ public class OfflineMode extends CordovaPlugin {
                     meta.read(buffer);
                     meta.close();
                     JSONObject metadata = new JSONObject(new String(buffer, "UTF-8"));
-                    String jsonContentType = metadata.getString("Content-Type");
-                    int jsonContentLength = metadata.getInt("Content-Length");
 
-                    if(jsonContentType != null && !jsonContentType.isEmpty())
-                        contentType = jsonContentType;
-                    if(jsonContentLength > 0)
-                        contentLength = jsonContentLength;
 
+                    String newUri = metadata.has("Location") ? metadata.getString("Location") : null;
+                    if(newUri != null) {
+                        newUri = newUri.trim();
+                        if(!newUri.equals("")) {
+                            return this.handleOpenForRead(toPluginUri(Uri.parse(newUri)));
+                        }
+                    } else {
+                        String jsonContentType = metadata.has("Content-Type") ? metadata.getString("Content-Type") : null;
+                        int jsonContentLength = metadata.has("Content-Length") ? metadata.getInt("Content-Length") : 0;
+
+                        if (jsonContentType != null && !jsonContentType.isEmpty())
+                            contentType = jsonContentType;
+                        if (jsonContentLength > 0)
+                            contentLength = jsonContentLength;
+                    }
                 } catch(Exception e) {
                     Log.e("Error: ", e.getMessage());
                 }
             }
 
-            return new CordovaResourceApi.OpenForReadResult(uri, stream, contentType, contentLength, null);
+            if (cached.exists()) {
+                InputStream stream = new FileInputStream(cached);
+                if (contentLength == 0)
+                    contentLength = stream.available();
+
+                return new CordovaResourceApi.OpenForReadResult(uri, stream, contentType, contentLength, null);
+            }
+
         }
 
         return new CordovaResourceApi.OpenForReadResult(uri, null, "text/plain", 0, null);

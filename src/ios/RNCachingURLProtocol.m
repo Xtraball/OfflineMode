@@ -62,8 +62,10 @@
         ) {
         return YES;
     }
-    
-    return NO;
+
+    RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[self cachePathForRequest:request]];
+
+    return (cache != nil);
 }
 
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request
