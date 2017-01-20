@@ -65,7 +65,7 @@
     
     RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[RNCachingURLProtocol cachePathForRequest:request]];
     
-    return (cache != nil);
+    return (cache != nil && ![SBOfflineModeManager sharedManager].isOnline && !isCheckingConnection && !isChangingStatus); // handle if we're offline and have cached data
 }
 
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request
@@ -80,14 +80,18 @@
     
     // Here we remove the timestamp ?t=123456789 in request for caching. It's useful when dealing with dynamic css and such
     NSString *url = [[aRequest URL] absoluteString];
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\.css\\?t=[\\d]+$" options:NSRegularExpressionCaseInsensitive error:NULL];
-    NSString *modifiedUrl = [regex stringByReplacingMatchesInString:url options:0 range:NSMakeRange(0, [url length]) withTemplate:@".css"];
-    
-    if(![url isEqualToString:modifiedUrl]) {
-        NSLog(@"Storing URL %@ instead of %@", modifiedUrl, url);
+    if(url != nil && [url isKindOfClass:[NSString class]] && ![url isEqualToString:@""]) {
+        NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\.css\\?t=[\\d]+$" options:NSRegularExpressionCaseInsensitive error:NULL];
+        NSString *modifiedUrl = [regex stringByReplacingMatchesInString:url options:0 range:NSMakeRange(0, [url length]) withTemplate:@".css"];
+        
+        if(![url isEqualToString:modifiedUrl]) {
+            NSLog(@"Storing URL %@ instead of %@", modifiedUrl, url);
+        }
+        
+        return [cachesPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%lx", (unsigned long) [modifiedUrl hash]]];
     }
     
-    return [cachesPath stringByAppendingPathComponent:[NSString stringWithFormat:@"%lx", (unsigned long) [modifiedUrl hash]]];
+    return nil;
 }
 
 - (void)startLoading
@@ -131,6 +135,7 @@
         
         // we need to mark this request with our header so we know not to handle it in +[NSURLProtocol canInitWithRequest:].
         [connectionRequest setValue:@"1" forHTTPHeaderField:RNCachingURLHeader];
+        [connectionRequest setTimeoutInterval:15];
         NSURLConnection *connection = [NSURLConnection connectionWithRequest:connectionRequest
                                                                     delegate:self];
         [self setConnection:connection];
@@ -170,6 +175,8 @@
         // must not be marked with our header.
         [redirectableRequest setValue:nil forHTTPHeaderField:@"X-Native-Cache"];
         [redirectableRequest setValue:nil forHTTPHeaderField:RNCachingURLHeader];
+        [redirectableRequest setTimeoutInterval:15];
+        
         NSString *cachePath = [RNCachingURLProtocol cachePathForRequest:[self request]];
         RNCachedData *cache = [RNCachedData new];
         
@@ -194,12 +201,7 @@
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
-{
-    if([SBOfflineModeManager sharedManager].isOnline) {
-        [[SBOfflineModeManager sharedManager] setUnreachable];
-        [self startLoading];
-    }
-    
+{    
     [[self client] URLProtocol:self didFailWithError:error];
     [self setConnection:nil];
     [self setData:nil];
