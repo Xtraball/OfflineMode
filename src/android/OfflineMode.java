@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
@@ -317,6 +318,8 @@ public class OfflineMode extends CordovaPlugin {
                         URL url = new URL(checkConnectionUrl);
                         connection = (HttpURLConnection) url.openConnection();
                         connection.setRequestMethod("GET");
+                        connection.setConnectTimeout(5);
+                        connection.setReadTimeout(5);
                         connection.connect();
 
                         if (connection.getResponseCode() == 200) {
@@ -340,7 +343,9 @@ public class OfflineMode extends CordovaPlugin {
 
                     } catch(UnknownHostException e) {
                         setUnreachable();
-                    } catch (Exception e) {
+                    } catch(SocketTimeoutException e) {
+                        setUnreachable();
+                    } catch(Exception e) {
                         Log.e("Error: ", e.getMessage());
                     } finally {
                         if (connection != null)
