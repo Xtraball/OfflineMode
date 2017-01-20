@@ -62,9 +62,9 @@
         ) {
         return YES;
     }
-
-    RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[self cachePathForRequest:request]];
-
+    
+    RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[RNCachingURLProtocol cachePathForRequest:request]];
+    
     return (cache != nil);
 }
 
@@ -73,7 +73,7 @@
     return request;
 }
 
-- (NSString *)cachePathForRequest:(NSURLRequest *)aRequest
++ (NSString *)cachePathForRequest:(NSURLRequest *)aRequest
 {
     // This stores in the Caches directory, which can be deleted when space is low, but we only use it for offline access
     NSString *cachesPath = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject];
@@ -94,12 +94,12 @@
 {
     BOOL loadData = YES;
     NSArray *cachedExtensions = [[NSArray alloc] initWithObjects:@"js", @"css", @"png", @"jpg", @"gif", nil];
-
+    
     BOOL cache = [cachedExtensions containsObject:[[[self request] URL] pathExtension]] || [[[self request] valueForHTTPHeaderField:@"X-Native-Cache"] isEqualToString:@"true"];
     
     if (cache) {
         
-        RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[self cachePathForRequest:[self request]]];
+        RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[RNCachingURLProtocol cachePathForRequest:[self request]]];
         
         if (![SBOfflineModeManager sharedManager].isOnline && cache) {
             NSData *data = [cache data];
@@ -170,10 +170,10 @@
         // must not be marked with our header.
         [redirectableRequest setValue:nil forHTTPHeaderField:@"X-Native-Cache"];
         [redirectableRequest setValue:nil forHTTPHeaderField:RNCachingURLHeader];
-        NSString *cachePath = [self cachePathForRequest:[self request]];
+        NSString *cachePath = [RNCachingURLProtocol cachePathForRequest:[self request]];
         RNCachedData *cache = [RNCachedData new];
         
-      
+        
         
         [cache setResponse: [self addCacheHeaderToResponse:response]];
         [cache setData:[self data]];
@@ -217,7 +217,7 @@
     [[self client] URLProtocolDidFinishLoading:self];
     
     // NSLog(@"Caching data 2");
-    NSString *cachePath = [self cachePathForRequest:[self request]];
+    NSString *cachePath = [RNCachingURLProtocol cachePathForRequest:[self request]];
     RNCachedData *cache = [RNCachedData new];
     [cache setResponse: [self addCacheHeaderToResponse:[self response]]];
     [cache setData:[self data]];
