@@ -37,6 +37,7 @@ NSString *icb;
     NSLog(@"[ios] cacheURL : %@", uri);
     NSURL *url = [NSURL URLWithString:uri];
     if(url) {
+        
         [[[SBOfflineModeDownloader alloc]
          initWithCommandDelegate:self.commandDelegate
          callback:command.callbackId

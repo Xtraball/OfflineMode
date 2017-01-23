@@ -64,7 +64,8 @@
     }
     
     RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[RNCachingURLProtocol cachePathForRequest:request]];
-    
+    NSLog(@"cache exists for URL %@ ? %@", [request URL], cache);
+
     return (cache != nil && ![SBOfflineModeManager sharedManager].isOnline && !isCheckingConnection && !isChangingStatus); // handle if we're offline and have cached data
 }
 
@@ -94,6 +95,13 @@
     return nil;
 }
 
++ (NSHTTPURLResponse *) addCacheHeaderToResponse:(NSURLResponse *)response {
+    NSHTTPURLResponse *resp = (NSHTTPURLResponse *)response;
+    NSMutableDictionary *headers = [resp.allHeaderFields mutableCopy];
+    [headers setObject:@"true" forKey:@"X-From-Native-Cache"];
+    return [[NSHTTPURLResponse alloc] initWithURL:resp.URL statusCode:resp.statusCode HTTPVersion:@"HTTP/1.1" headerFields:headers];
+}
+
 - (void)startLoading
 {
     BOOL loadData = YES;
@@ -109,6 +117,8 @@
             NSData *data = [cache data];
             NSURLResponse *response = [cache response];
             NSURLRequest *redirectRequest = [cache redirectRequest];
+
+            NSLog(@"Will cache URL: %@", [[self request] URL]);
             
             if (redirectRequest) {
                 [[self client] URLProtocol:self wasRedirectedToRequest:redirectRequest redirectResponse:response];
@@ -147,13 +157,6 @@
     [[self connection] cancel];
 }
 
-- (NSHTTPURLResponse *) addCacheHeaderToResponse:(NSURLResponse *)response {
-    NSHTTPURLResponse *resp = (NSHTTPURLResponse *)response;
-    NSMutableDictionary *headers = [resp.allHeaderFields mutableCopy];
-    [headers setObject:@"true" forKey:@"X-From-Native-Cache"];
-    return [[NSHTTPURLResponse alloc] initWithURL:resp.URL statusCode:resp.statusCode HTTPVersion:@"HTTP/1.1" headerFields:headers];
-}
-
 // NSURLConnection delegates (generally we pass these on to our client)
 
 - (NSURLRequest *)connection:(NSURLConnection *)connection willSendRequest:(NSURLRequest *)request redirectResponse:(NSURLResponse *)response
@@ -177,12 +180,12 @@
         [redirectableRequest setValue:nil forHTTPHeaderField:RNCachingURLHeader];
         [redirectableRequest setTimeoutInterval:15];
         
+        NSLog(@"Caching URL: %@", [[self request] URL]);
+        
         NSString *cachePath = [RNCachingURLProtocol cachePathForRequest:[self request]];
         RNCachedData *cache = [RNCachedData new];
         
-        
-        
-        [cache setResponse: [self addCacheHeaderToResponse:response]];
+        [cache setResponse: [RNCachingURLProtocol addCacheHeaderToResponse:response]];
         [cache setData:[self data]];
         [cache setRedirectRequest:redirectableRequest];
         [NSKeyedArchiver archiveRootObject:cache toFile:cachePath];
@@ -196,12 +199,14 @@
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
 {
+    NSLog(@"Received data for request : %@", [[self request] URL]);
     [[self client] URLProtocol:self didLoadData:data];
     [self appendData:data];
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
-{    
+{
+    NSLog(@"Connection failed for error: %@", error);
     [[self client] URLProtocol:self didFailWithError:error];
     [self setConnection:nil];
     [self setData:nil];
@@ -210,6 +215,7 @@
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
 {
+    NSLog(@"Received response for URL: %@", [[self request] URL]);
     [self setResponse:response];
     [[self client] URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageNotAllowed];  // We cache ourselves.
 }
@@ -221,8 +227,9 @@
     // NSLog(@"Caching data 2");
     NSString *cachePath = [RNCachingURLProtocol cachePathForRequest:[self request]];
     RNCachedData *cache = [RNCachedData new];
-    [cache setResponse: [self addCacheHeaderToResponse:[self response]]];
+    [cache setResponse: [RNCachingURLProtocol addCacheHeaderToResponse:[self response]]];
     [cache setData:[self data]];
+    NSLog(@"Cached URL: %@", [[self request] URL]);
     [NSKeyedArchiver archiveRootObject:cache toFile:cachePath];
     
     [self setConnection:nil];
@@ -232,6 +239,7 @@
 
 - (void)appendData:(NSData *)newData
 {
+    NSLog(@"Received data for request : %@", [[self request] URL]);
     if ([self data] == nil) {
         [self setData:[newData mutableCopy]];
     } else {

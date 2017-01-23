@@ -1,6 +1,6 @@
 #import <Cordova/CDV.h>
 
-@interface SBOfflineModeDownloader : NSObject <NSURLProtocolClient> {
+@interface SBOfflineModeDownloader : NSObject {
     NSString *callback;
     NSURL *URL;
     NSObject<CDVCommandDelegate> *cmdDelegate;

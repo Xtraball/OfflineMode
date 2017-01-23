@@ -1,15 +1,19 @@
 #import "SBOfflineModeDownloader.h"
 #import "RNCachingURLProtocol.h"
+#import "RNCachedData.h"
 
 @implementation SBOfflineModeDownloader
 
 BOOL running = NO;
+BOOL sentResult = NO;
 
 - (id)initWithCommandDelegate:(NSObject<CDVCommandDelegate> *)commandDelegate callback:(NSString *)callbackId andURL:(NSURL *)downloadURL {
     if(self = [self init]) {
         callback = callbackId;
         URL = downloadURL;
         cmdDelegate = commandDelegate;
+        running = NO;
+        sentResult = NO;
     }
     
     return self;
@@ -17,66 +21,35 @@ BOOL running = NO;
 
 - (void)start {
     if(running) return;
-    
     running = YES;
-    
-    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:URL];
-    [request setValue:@"true" forHTTPHeaderField:@"X-Native-Cache"];
-    
-    [[[RNCachingURLProtocol alloc]
-      initWithRequest: request
-      cachedResponse:nil
-      client:self] startLoading];
-}
 
-#pragma mark -
-#pragma mark Protocol Client for handling manual caching
+    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:URL];
+    NSString *cachePath = [RNCachingURLProtocol cachePathForRequest:request];
 
-- (void)URLProtocol:(NSURLProtocol *)protocol
-cachedResponseIsValid:(NSCachedURLResponse *)cachedResponse {
-    [self sendResult:CDVCommandStatus_OK];
-}
-
-- (void)URLProtocol:(NSURLProtocol *)protocol
-didCancelAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
-    [self sendResult:CDVCommandStatus_ERROR];
-}
-
-- (void)URLProtocol:(NSURLProtocol *)protocol
-   didFailWithError:(NSError *)error {
-    [self sendResult:CDVCommandStatus_ERROR];
-}
-
-- (void)URLProtocol:(NSURLProtocol *)protocol
-        didLoadData:(NSData *)data {
-    // No action
-}
-
-- (void)URLProtocol:(NSURLProtocol *)protocol
-didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge {
-    // No action
-}
-
-- (void)URLProtocol:(NSURLProtocol *)protocol
- didReceiveResponse:(NSURLResponse *)response
- cacheStoragePolicy:(NSURLCacheStoragePolicy)policy {
-    [self sendResult:CDVCommandStatus_OK];
-}
-
-- (void)URLProtocol:(NSURLProtocol *)protocol
-wasRedirectedToRequest:(NSURLRequest *)request
-   redirectResponse:(NSURLResponse *)redirectResponse {
-    // No action
-}
-
-- (void)URLProtocolDidFinishLoading:(NSURLProtocol *)protocol {
-    [self sendResult:CDVCommandStatus_OK];
+    NSURLSession *session = [NSURLSession sharedSession];
+    [[session dataTaskWithRequest:request
+            completionHandler:^(NSData *data,
+                                NSURLResponse *response,
+                                NSError *error) {
+                
+                if(!error) {
+                    RNCachedData *cache = [RNCachedData new];
+                    [cache setResponse: [RNCachingURLProtocol addCacheHeaderToResponse:response]];
+                    [cache setData:data];
+                    NSLog(@"Cached URL: %@", [request URL]);
+                    [NSKeyedArchiver archiveRootObject:cache toFile:cachePath];
+                    [self sendResult:CDVCommandStatus_OK];
+                } else {
+                    NSLog(@"Error caching URL : %@", [request URL]);
+                    NSLog(@"%@", error);
+                    [self sendResult:CDVCommandStatus_ERROR];
+                }
+            }] resume];
 }
 
 #pragma mark -
 #pragma mark Utils
 
-BOOL sentResult = NO;
 
 - (void)sendResult:(CDVCommandStatus)status {
     if(sentResult) return;
