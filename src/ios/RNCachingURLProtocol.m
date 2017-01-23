@@ -41,6 +41,12 @@
 
 + (BOOL)canInitWithRequest:(NSURLRequest *)request
 {
+    NSArray *cachedExtensions = [[NSArray alloc] initWithObjects:@"js", @"css", @"png", @"jpg", @"gif", nil];
+    BOOL cache = [cachedExtensions containsObject:[[request URL] pathExtension]] || [[request valueForHTTPHeaderField:@"X-Native-Cache"] isEqualToString:@"true"];
+    
+    if(!cache)
+        return NO;
+    
     NSString *url = [NSString stringWithFormat:@"%@", [request URL]];
     BOOL isCheckingConnection = [url rangeOfString:@"check_connection.php" options:NSCaseInsensitiveSearch].location != NSNotFound;
     BOOL isChangingStatus = NO;
@@ -51,22 +57,19 @@
         [SBOfflineModeManager sharedManager].isOnline = NO;
         return NO;
     }
-    
+
     // only handle http requests we haven't marked with our header.
     if (([[[request URL] scheme] isEqualToString:@"http"] ||
          [[[request URL] scheme] isEqualToString:@"https"]) &&
         ([request valueForHTTPHeaderField:RNCachingURLHeader] == nil) &&
         (![[request HTTPMethod] isEqualToString:@"POST"]) &&
         !isCheckingConnection &&
-        !isChangingStatus
+        !isChangingStatus && cache
         ) {
         return YES;
     }
     
-    RNCachedData *cache = [NSKeyedUnarchiver unarchiveObjectWithFile:[RNCachingURLProtocol cachePathForRequest:request]];
-    NSLog(@"cache exists for URL %@ ? %@", [request URL], cache);
-
-    return (cache != nil && ![SBOfflineModeManager sharedManager].isOnline && !isCheckingConnection && !isChangingStatus); // handle if we're offline and have cached data
+    return NO;
 }
 
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request
