@@ -1,6 +1,8 @@
 package com.appsmobilecompany.base;
 
 import android.annotation.TargetApi;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
@@ -54,8 +56,12 @@ public class OfflineMode extends CordovaPlugin {
     public boolean postNotifications = false;
     public String checkConnectionUrl;
     public CallbackContext icb;
-    
+    SharedPreferences preferences;
+
     protected void pluginInitialize() {
+        preferences = this.cordova.getActivity().getSharedPreferences("offline-mode", Context.MODE_PRIVATE);
+        canCache = preferences.getBoolean("canCache", false);
+
         checkConnection();
     }
     
@@ -75,6 +81,9 @@ public class OfflineMode extends CordovaPlugin {
 
         if (action.equals("setCanCache")) {
             canCache = true;
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putBoolean("canCache", true);
+            editor.commit();
             callbackContext.success();
             return true;
         }
