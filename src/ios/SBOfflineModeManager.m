@@ -25,7 +25,8 @@ NSTimer *checkTimer;
     if (self = [super init]) {
         checkConnectionURL = nil;
         isOnline = YES;
-        
+        canCache = [[NSUserDefaults standardUserDefaults] boolForKey:@"canCache"];
+
         // Allocate a reachability object
         TMReachability* reach = [TMReachability reachabilityWithHostname:@"www.google.com"];
         
