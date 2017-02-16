@@ -7,6 +7,7 @@
 
 BOOL isAwareOfReachability = NO;
 BOOL postNotifications = NO;
+BOOL canCache = NO;
 NSTimer *checkTimer;
 
 #pragma mark Singleton Methods

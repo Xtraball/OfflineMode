@@ -47,7 +47,8 @@ public class OfflineMode extends CordovaPlugin {
         CACHED_EXTENSIONS.add("js");
         CACHED_EXTENSIONS.add("css");
     }
-    
+
+    public boolean canCache = false;
     public boolean isOnline = true;
     public boolean isAwareOfReachability = false;
     public boolean postNotifications = false;
@@ -69,6 +70,12 @@ public class OfflineMode extends CordovaPlugin {
         
         if (action.equals("setInternalCallback")) {
             icb = callbackContext;
+            return true;
+        }
+
+        if (action.equals("setCanCache")) {
+            canCache = true;
+            callbackContext.success();
             return true;
         }
         
@@ -104,20 +111,22 @@ public class OfflineMode extends CordovaPlugin {
     
     @Override
     public Uri remapUri(Uri uri) {
-        File cached = new File(this.cachePathForUri(uri));
-        File cachedMeta = new File(this.cachePathForUri(uri)+".meta");
-        if(cached.exists() || cachedMeta.exists()) {
-            return toPluginUri(uri);
-        } else {
-            if(uri.getScheme().startsWith("http")) {
-                String filename = uri.getLastPathSegment();
-                
-                if(filename != null) {
-                    int lastDot = filename.lastIndexOf(".");
-                    if(lastDot > 0 && lastDot+1 < filename.length()) {
-                        String ext = filename.substring(lastDot+1);
-                        if(CACHED_EXTENSIONS.contains(ext)) {
-                            return toPluginUri(uri);
+        if(canCache) {
+            File cached = new File(this.cachePathForUri(uri));
+            File cachedMeta = new File(this.cachePathForUri(uri)+".meta");
+            if(cached.exists() || cachedMeta.exists()) {
+                return toPluginUri(uri);
+            } else {
+                if(uri.getScheme().startsWith("http")) {
+                    String filename = uri.getLastPathSegment();
+
+                    if(filename != null) {
+                        int lastDot = filename.lastIndexOf(".");
+                        if(lastDot > 0 && lastDot+1 < filename.length()) {
+                            String ext = filename.substring(lastDot+1);
+                            if(CACHED_EXTENSIONS.contains(ext)) {
+                                return toPluginUri(uri);
+                            }
                         }
                     }
                 }
