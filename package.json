@@ -1,7 +1,7 @@
 {
-  "name": "siberian-plugin-offlinemode",
+  "name": "OfflineMode",
   "version": "2.1.1",
-  "description": "Offline mode",
+  "description": "Cordova OfflineMode",
   "cordova": {
     "platforms": [
       "android",
